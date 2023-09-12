@@ -333,7 +333,7 @@ services:
       DB_USER: blobber_user
       DB_PASSWORD: blobber
       DB_PORT: "5432"
-      DB_HOST: blobber_validator_1
+      DB_HOST: blobber_postgres_1
     depends_on:
       - validator
     links:
