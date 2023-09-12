@@ -296,6 +296,7 @@ EOF
 echo "creating docker-compose file"
 cat <<EOF >${PROJECT_ROOT}/docker-compose.yml
 ---
+---
 version: "3"
 services:
   postgres:
@@ -303,12 +304,12 @@ services:
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
-      - ${PROJECT_ROOT_SSD}/data/postgresql:/var/lib/postgresql/data
-      - ${PROJECT_ROOT}/postgresql.conf:/var/lib/postgresql/postgresql.conf
-      - ${PROJECT_ROOT}/sql_init:/docker-entrypoint-initdb.d
+      - /var/0chain/blobber/ssd/data/postgresql:/var/lib/postgresql/data
+      - /var/0chain/blobber/postgresql.conf:/var/lib/postgresql/postgresql.conf
+      - /var/0chain/blobber/sql_init:/docker-entrypoint-initdb.d
     command: postgres -c config_file=/var/lib/postgresql/postgresql.conf
     networks:
-      default:
+      - testnet0
     restart: "always"
 
   validator:
@@ -316,13 +317,13 @@ services:
     environment:
       - DOCKER= true
     volumes:
-      - ${PROJECT_ROOT}/config:/validator/config
-      - ${PROJECT_ROOT_HDD}/data:/validator/data
-      - ${PROJECT_ROOT_HDD}/log:/validator/log
-      - ${PROJECT_ROOT}/keys_config:/validator/keysconfig
-    command: ./bin/validator --port 5061 --hostname ${BLOBBER_HOST} --deployment_mode 0 --keys_file keysconfig/b0vnode01_keys.txt --log_dir /validator/log --hosturl https://${BLOBBER_HOST}/validator
+      - /var/0chain/blobber/config:/validator/config
+      - /var/0chain/blobber/hdd/data:/validator/data
+      - /var/0chain/blobber/hdd/log:/validator/log
+      - /var/0chain/blobber/keys_config:/validator/keysconfig
+    command: ./bin/validator --port 5061 --hostname blobberbeta3.zusfiver.com --deployment_mode 0 --keys_file keysconfig/b0vnode01_keys.txt --log_dir /validator/log --hosturl https://blobberbeta3.zusfiver.com/validator
     networks:
-      default:
+      - testnet0
     restart: "always"
 
   blobber:
@@ -333,27 +334,27 @@ services:
       DB_USER: blobber_user
       DB_PASSWORD: blobber
       DB_PORT: "5432"
-      DB_HOST: postgres
+      DB_HOST: blobber_validator_1
     depends_on:
       - validator
     links:
       - validator:validator
     volumes:
-      - ${PROJECT_ROOT}/config:/blobber/config
-      - ${PROJECT_ROOT_HDD}/files:/blobber/files
-      - ${PROJECT_ROOT_HDD}/data:/blobber/data
-      - ${PROJECT_ROOT_HDD}/log:/blobber/log
-      - ${PROJECT_ROOT}/keys_config:/blobber/keysconfig # keys and minio config
-      - ${PROJECT_ROOT_HDD}/data/tmp:/tmp
-      - ${PROJECT_ROOT}/sql:/blobber/sql
-    command: ./bin/blobber --port 5051 --grpc_port 31501 --hostname ${BLOBBER_HOST}  --deployment_mode 0 --keys_file keysconfig/b0bnode01_keys.txt --files_dir /blobber/files --log_dir /blobber/log --db_dir /blobber/data --hosturl https://${BLOBBER_HOST}
+      - /var/0chain/blobber/config:/blobber/config
+      - /var/0chain/blobber/hdd/files:/blobber/files
+      - /var/0chain/blobber/hdd/data:/blobber/data
+      - /var/0chain/blobber/hdd/log:/blobber/log
+      - /var/0chain/blobber/keys_config:/blobber/keysconfig # keys and minio config
+      - /var/0chain/blobber/hdd/data/tmp:/tmp
+      - /var/0chain/blobber/sql:/blobber/sql
+    command: ./bin/blobber --port 5051 --grpc_port 31501 --hostname blobberbeta3.zusfiver.com  --deployment_mode 0 --keys_file keysconfig/b0bnode01_keys.txt --files_dir /blobber/files --log_dir /blobber/log --db_dir /blobber/data --hosturl https://blobberbeta3.zusfiver.com
     networks:
-      default:
+      - testnet0
     restart: "always"
 
 networks:
-  default:
-    driver: bridge
+  testnet0:
+    external: true
 
 volumes:
   grafana_data:
