@@ -296,7 +296,6 @@ EOF
 echo "creating docker-compose file"
 cat <<EOF >${PROJECT_ROOT}/docker-compose.yml
 ---
----
 version: "3"
 services:
   postgres:
