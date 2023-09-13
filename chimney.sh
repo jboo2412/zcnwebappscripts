@@ -308,7 +308,7 @@ services:
       - /var/0chain/blobber/sql_init:/docker-entrypoint-initdb.d
     command: postgres -c config_file=/var/lib/postgresql/postgresql.conf
     networks:
-      - testnet0
+      default:
     restart: "always"
 
   validator:
@@ -322,9 +322,9 @@ services:
       - /var/0chain/blobber/keys_config:/validator/keysconfig
     command: ./bin/validator --port 5061 --hostname ${BLOBBER_HOST} --deployment_mode 0 --keys_file keysconfig/b0vnode01_keys.txt --log_dir /validator/log --hosturl https://${BLOBBER_HOST}/validator
     networks:
-      - testnet0
+      default:
     restart: "always"
-
+    
   blobber:
     image: 0chaindev/blobber:staging
     environment:
@@ -348,12 +348,12 @@ services:
       - /var/0chain/blobber/sql:/blobber/sql
     command: ./bin/blobber --port 5051 --grpc_port 31501 --hostname ${BLOBBER_HOST}  --deployment_mode 0 --keys_file keysconfig/b0bnode01_keys.txt --files_dir /blobber/files --log_dir /blobber/log --db_dir /blobber/data --hosturl https://${BLOBBER_HOST}
     networks:
-      - testnet0
+      default:
     restart: "always"
 
 networks:
-  testnet0:
-    external: true
+  default:
+    driver: bridge
 
 volumes:
   grafana_data:
