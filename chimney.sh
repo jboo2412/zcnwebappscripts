@@ -320,7 +320,7 @@ services:
       - /var/0chain/blobber/hdd/data:/validator/data
       - /var/0chain/blobber/hdd/log:/validator/log
       - /var/0chain/blobber/keys_config:/validator/keysconfig
-    command: ./bin/validator --port 5061 --hostname blobberbeta3.zusfiver.com --deployment_mode 0 --keys_file keysconfig/b0vnode01_keys.txt --log_dir /validator/log --hosturl https://blobberbeta3.zusfiver.com/validator
+    command: ./bin/validator --port 5061 --hostname ${BLOBBER_HOST} --deployment_mode 0 --keys_file keysconfig/b0vnode01_keys.txt --log_dir /validator/log --hosturl https://${BLOBBER_HOST}/validator
     networks:
       - testnet0
     restart: "always"
@@ -346,7 +346,7 @@ services:
       - /var/0chain/blobber/keys_config:/blobber/keysconfig # keys and minio config
       - /var/0chain/blobber/hdd/data/tmp:/tmp
       - /var/0chain/blobber/sql:/blobber/sql
-    command: ./bin/blobber --port 5051 --grpc_port 31501 --hostname blobberbeta3.zusfiver.com  --deployment_mode 0 --keys_file keysconfig/b0bnode01_keys.txt --files_dir /blobber/files --log_dir /blobber/log --db_dir /blobber/data --hosturl https://blobberbeta3.zusfiver.com
+    command: ./bin/blobber --port 5051 --grpc_port 31501 --hostname ${BLOBBER_HOST}  --deployment_mode 0 --keys_file keysconfig/b0bnode01_keys.txt --files_dir /blobber/files --log_dir /blobber/log --db_dir /blobber/data --hosturl https://${BLOBBER_HOST}
     networks:
       - testnet0
     restart: "always"
