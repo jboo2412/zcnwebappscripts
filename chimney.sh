@@ -55,21 +55,6 @@ install_tools_utilities() {
     echo -e "\e[32m  $REQUIRED_PKG is already installed on the server/machine.  \e[23m \n"
   fi
 }
-check_port_443() {
-  PORT=443
-  command -v netstat >/dev/null 2>&1 || {
-    echo >&2 "netstat command not found. Exiting."
-    exit 1
-  }
-
-  if netstat -tulpn | grep ":$PORT" >/dev/null; then
-    echo "Port $PORT is in use."
-    echo "Please stop the process running on port $PORT and run the script again"
-    exit 1
-  else
-    echo "Port $PORT is not in use."
-  fi
-}
 
 install_tools_utilities unzip
 install_tools_utilities curl
@@ -106,7 +91,6 @@ if [ -f "${PROJECT_ROOT}/docker-compose.yml" ]; then
 fi
 
 echo "checking if ports are available..."
-check_port_443
 
 # #Disk setup
 # mkdir -p $PWD/disk-setup/
@@ -189,81 +173,6 @@ cat <<EOF >${PROJECT_ROOT}/keys_config/minio_config.txt
 block_worker: ${BLOCK_WORKER_URL}
 EOF
 
-### Caddyfile
-echo "creating Caddyfile"
-cat <<EOF >${PROJECT_ROOT}/Caddyfile
-(cors) {
-  @cors_preflight method OPTIONS
-  @cors header Origin {args.0}
-
-  handle @cors_preflight {
-    header Access-Control-Allow-Origin "*"
-    header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE"
-    header Access-Control-Allow-Headers "*"
-    header Access-Control-Max-Age "3600"
-    respond "" 204
-  }
-
-  handle @cors {
-    header Access-Control-Allow-Origin "*"
-    header Access-Control-Expose-Headers "Link"
-  }
-}
-
-{
-   acme_ca https://acme.ssl.com/sslcom-dv-ecc
-    acme_eab {
-        key_id 73c05aaf847a
-        mac_key 2RgDeFUTLy898F-4lcDesaWUc91IADS1Lv4_QVknhlY
-    }
-   email   b.manu199@gmail.com
-}
-
-${BLOBBER_HOST} {
-  import cors https://${BLOBBER_HOST}
-  log {
-    output file /var/log/access.log {
-      roll_size 1gb
-      roll_keep 5
-      roll_keep_for 720h
-    }
-  }
-
-  route {
-    reverse_proxy blobber:5051
-  }
-
-  route /validator* {
-    uri strip_prefix /validator
-    reverse_proxy validator:5061
-  }
-
-  route /portainer* {
-    uri strip_prefix /portainer
-    header Access-Control-Allow-Methods "POST,PATCH,PUT,DELETE, GET, OPTIONS"
-    header Access-Control-Allow-Headers "*"
-    header Access-Control-Allow-Origin "*"
-    header Cache-Control max-age=3600
-    reverse_proxy portainer:9000
-  }
-
-  route /monitoring* {
-    uri strip_prefix /monitoring
-    header Access-Control-Allow-Methods "POST,PATCH,PUT,DELETE, GET, OPTIONS"
-    header Access-Control-Allow-Headers "*"
-    header Access-Control-Allow-Origin "*"
-    header Cache-Control max-age=3600
-    reverse_proxy monitoringapi:3001
-  }
-
-  route /grafana* {
-    uri strip_prefix /grafana
-    reverse_proxy grafana:3000
-  }
-}
-
-EOF
-
 ### docker-compose.yaml
 echo "creating docker-compose file"
 cat <<EOF >${PROJECT_ROOT}/docker-compose.yml
@@ -328,103 +237,6 @@ services:
     networks:
       default:
     restart: "always"
-
-  caddy:
-    image: caddy:2.6.4
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - ${PROJECT_ROOT}/Caddyfile:/etc/caddy/Caddyfile
-      - ${PROJECT_ROOT}/site:/srv
-      - ${PROJECT_ROOT}/caddy_data:/data
-      - ${PROJECT_ROOT}/caddy_config:/config
-    restart: "always"
-
-  promtail:
-    image: grafana/promtail:2.8.2
-    volumes:
-      - ${PROJECT_ROOT_HDD}/log/:/logs
-      - ${PROJECT_ROOT}/monitoringconfig/promtail-config.yaml:/mnt/config/promtail-config.yaml
-    command: -config.file=/mnt/config/promtail-config.yaml
-    restart: "always"
-
-  loki:
-    image: grafana/loki:2.8.2
-    user: "1001"
-    volumes:
-      - ${PROJECT_ROOT}/monitoringconfig/loki-config.yaml:/mnt/config/loki-config.yaml
-      - ${PROJECT_ROOT_HDD}/loki:/data
-      - ${PROJECT_ROOT_HDD}/loki/rules:/etc/loki/rules
-    command: -config.file=/mnt/config/loki-config.yaml
-    restart: "always"
-
-  prometheus:
-    image: prom/prometheus:v2.44.0
-    user: root
-    volumes:
-      - ${PROJECT_ROOT}/monitoringconfig/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-    restart: "always"
-    depends_on:
-    - cadvisor
-
-  cadvisor:
-    image: wywywywy/docker_stats_exporter:20220516
-    container_name: cadvisor
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    restart: "always"
-
-  node-exporter:
-    image: prom/node-exporter:v1.5.0
-    container_name: node-exporter
-    restart: unless-stopped
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)(\$\$|/)'
-    restart: "always"
-
-  grafana:
-    image: grafana/grafana:9.5.2
-    environment:
-      GF_SERVER_ROOT_URL: "https://${BLOBBER_HOST}/grafana"
-      GF_SECURITY_ADMIN_USER: "${GF_ADMIN_USER}"
-      GF_SECURITY_ADMIN_PASSWORD: "${GF_ADMIN_PASSWORD}"
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
-    volumes:
-      - ${PROJECT_ROOT}/monitoringconfig/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yaml
-      - grafana_data:/var/lib/grafana
-    restart: "always"
-
-  monitoringapi:
-    image: 0chaindev/monitoringapi:latest
-    restart: "always"
-
-  agent:
-    image: portainer/agent:2.18.2-alpine
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/volumes:/var/lib/docker/volumes
-
-  portainer:
-    image: portainer/portainer-ce:2.18.2-alpine
-    command: '-H tcp://agent:9001 --tlsskipverify --admin-password-file /tmp/portainer_password'
-    links:
-      - agent:agent
-    volumes:
-      - portainer_data:/data
-      - /tmp/portainer_password:/tmp/portainer_password
 
 networks:
   default:
