@@ -90,8 +90,6 @@ if [ -f "${PROJECT_ROOT}/docker-compose.yml" ]; then
   rm -rf ${PROJECT_ROOT} || true
 fi
 
-echo "checking if ports are available..."
-
 # #Disk setup
 # mkdir -p $PWD/disk-setup/
 # wget https://raw.githubusercontent.com/0chain/zcnwebappscripts/${BRANCH_NAME}/disk-setup/disk_setup.sh -O $PWD/disk-setup/disk_setup.sh
